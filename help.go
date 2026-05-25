@@ -7,24 +7,33 @@ import (
 	"strings"
 )
 
+// Helper builds and writes help text for a command.
+// Obtain one with [Help], configure it with the chainable setters, then call
+// [Helper.Execute] to write the output to [CommandContext.Err].
 type Helper struct {
 	subCommands bool
 	ctx         *CommandContext
 }
 
+// Help returns a Helper for ctx with sub-command listing disabled.
 func Help(ctx *CommandContext) *Helper {
 	return &Helper{ctx: ctx, subCommands: false}
 }
 
+// SubCommands controls whether the sub-command list is included in the output.
+// Returns h for chaining.
 func (h *Helper) SubCommands(subCommands bool) *Helper {
 	h.subCommands = subCommands
 	return h
 }
 
+// WithSubCommands enables sub-command listing and returns h for chaining.
 func (h *Helper) WithSubCommands() *Helper {
 	return h.SubCommands(true)
 }
 
+// Execute writes the usage line, description, and (if enabled) the sorted
+// sub-command list to [CommandContext.Err], then calls [Command.Help] if set.
 func (h *Helper) Execute() (err error) {
 	ctx := h.ctx
 	help := ctx.cmd.Help
