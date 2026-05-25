@@ -16,29 +16,51 @@ package main
 import (
     "fmt"
     "os"
+    "net/http"
     "path/filepath"
 
     cc "github.com/moisespsena-go/command-context"
 )
 
 func main() {
+    const bindKey = "bindAddr"
+
     root := &cc.Command{
         Name:        filepath.Base(os.Args[0]),
-        Description: "runs the HTTP server",
+        Description: "runs the http server",
+        New: func(ctx *cc.CommandContext) error {
+            var bind string
+            ctx.WithValue(bindKey, &bind)
+            ctx.Flags().StringVar(&bind, "bind", "0.0.0.0:8000", "address to listen on")
+            return nil
+        },
+        Run: func(ctx *cc.CommandContext) error {
+            bind := *ctx.Value(bindKey).(*string)
+            fmt.Fprintf(ctx.Out, "listening on %s\n", bind)
+
+            mux := http.NewServeMux()
+            mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+                fmt.Fprint(w, "Welcome to the github.com/moisespsena-go/command-context example page!")
+            })
+            return http.ListenAndServe(bind, mux)
+        },
     }
 
-    root.Sub(&cc.Command{
+    passwd := &cc.Command{
         Name:        "passwd",
-        Description: "changes a user password",
+        Description: "changes user password",
         Usage:       "USER_NAME",
         ParseArgs: func(ctx *cc.CommandContext) error {
             return ctx.Args.Eq(1) // require exactly one positional argument
         },
         Run: func(ctx *cc.CommandContext) error {
+            userName := ctx.Args[0]
             fmt.Fprintf(ctx.Out, "changing password for %s\n", ctx.Args[0])
             return nil
         },
-    })
+    }
+
+    root.Sub(passwd)
 
     ctx, err := root.Parse(nil)
     if err != nil {

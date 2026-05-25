@@ -4,16 +4,35 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"net/http"
 
 	"github.com/mattn/go-tty"
 	cc "github.com/moisespsena-go/command-context"
 )
 
 func main() {
+	const bindKey = "bindAddr"
+
 	// the default command.
 	main := &cc.Command{
 		Name:        filepath.Base(os.Args[0]),
 		Description: "runs the http server",
+		New: func(ctx *cc.CommandContext) (err error) {
+			var bind string
+			ctx.WithValue(bindKey, &bind)
+			ctx.Flags().StringVar(&bind, "bind", "0.0.0.0:8000", "address to listen on")
+			return nil
+		},
+		Run: func(ctx *cc.CommandContext) (err error) {
+			bind := *ctx.Value(bindKey).(*string)
+			fmt.Fprintf(ctx.Out, "listening on %s\n", bind)
+
+			mux := http.NewServeMux()
+			mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+				fmt.Fprint(w, "Welcome to the github.com/moisespsena-go/command-context example page!")
+			})
+			return http.ListenAndServe(bind, mux)
+		},
 	}
 
 	// the password manager sub command
