@@ -1,6 +1,6 @@
 module github.com/moisespsena-go/command-context
 
-go 1.26.3
+go 1.24
 
 require github.com/mattn/go-tty v0.0.8
 
