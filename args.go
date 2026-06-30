@@ -32,7 +32,7 @@ func (args Args) Eq(v int) (err error) {
 
 // Max returns an error if the number of arguments exceeds v.
 func (args Args) Max(v int) (err error) {
-	if len(args) < v {
+	if len(args) > v {
 		return fmt.Errorf("expected up to %d arguments, got %d", v, len(args))
 	}
 	return nil

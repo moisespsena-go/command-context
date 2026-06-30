@@ -29,16 +29,16 @@ type CommandContext struct {
 	// Err is the writer for standard error. Defaults to [os.Stderr].
 	// Can be redirected to a file with the -ERR flag.
 	Err io.Writer
-	parent    *CommandContext
-	cmd       *Command
-	flags     *flag.FlagSet
-	name      string
+	parent *CommandContext
+	cmd    *Command
+	flags  *flag.FlagSet
+	name   string
 	// Context is the standard-library context for cancellation and value propagation.
-	Context   context.Context
+	Context context.Context
 	// InputArgs is the raw argument slice received by this command before flag parsing.
 	InputArgs []string
 	// Args holds positional arguments remaining after flag parsing.
-	Args      Args
+	Args Args
 	// NamedArgs is an optional structured value populated by [Command.ParseArgs]; its type is caller-defined.
 	NamedArgs any
 }
@@ -129,22 +129,22 @@ func (ctx *CommandContext) Help() (err error) {
 // invoked by [Command.Parse] and [CommandContext.Run].
 type Command struct {
 	// Name is the command name used to match this command from its parent's argument list.
-	Name        string
+	Name string
 	// Usage is a short one-line argument synopsis appended after the command path in help output.
-	Usage       string
+	Usage string
 	// Description is the long-form description printed in help output.
 	Description string
 	sub         map[string]*Command
 	// New is called before flag parsing. Register flags on [CommandContext.Flags] here.
-	New         func(ctx *CommandContext) (err error)
+	New func(ctx *CommandContext) (err error)
 	// Help is called by [Helper.Execute] after the auto-generated usage block.
 	// Use it to print additional help text.
-	Help        func(ctx *CommandContext) (err error)
+	Help func(ctx *CommandContext) (err error)
 	// Run is called by [CommandContext.Run] to execute the command's logic.
-	Run         func(ctx *CommandContext) (err error)
+	Run func(ctx *CommandContext) (err error)
 	// ParseArgs is called after flag parsing to validate or transform positional arguments.
 	// Populate [CommandContext.NamedArgs] here for typed access in Run.
-	ParseArgs   func(ctx *CommandContext) (err error)
+	ParseArgs func(ctx *CommandContext) (err error)
 }
 
 // Sub registers sub as a sub-command of b and returns b for chaining.
@@ -154,6 +154,15 @@ func (b *Command) Sub(sub *Command) *Command {
 	}
 	b.sub[sub.Name] = sub
 	return b
+}
+
+func (b *Command) GetSub(name string) *Command {
+	return b.sub[name]
+}
+
+func (b *Command) IsSub(name string) (ok bool) {
+	_, ok = b.sub[name]
+	return
 }
 
 // SubCb registers sub as a sub-command of b, calls cb with sub, then returns b
@@ -262,8 +271,11 @@ parse:
 			if len(dot.sub) > 0 {
 				sub := dot.sub[subName]
 				if sub == nil {
-					err = ToContextParserError(ctx, "sub", fmt.Errorf("unknown command: %s", subName))
-					return
+					if ctx.cmd.Run == nil {
+						err = ToContextParserError(ctx, "sub", fmt.Errorf("unknown command: %s", subName))
+						return
+					}
+					return ctx, nil
 				}
 				ctx.Args = ctx.Args[1:]
 				ctx = ctx.Fork()

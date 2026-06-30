@@ -82,8 +82,63 @@ func main() {
 		},
 	}
 
-	// take passwd command as subcommand of main
+	// typed struct holding parsed flags, stored in ctx and retrieved in Run
+	type flags struct {
+		Role       string
+		Department string
+	}
+
+	// the user management sub command with its own sub-commands
+	user := &cc.Command{
+		Name:        "user",
+		Description: "manage system users",
+		Usage:       "[--role ROLE] [--dept DEPT] [add|rm]",
+		New: func(ctx *cc.CommandContext) (err error) {
+			f := &flags{}
+			flgs := ctx.Flags()
+			flgs.StringVar(&f.Role, "role", "viewer", "default role for new users")
+			flgs.StringVar(&f.Department, "dept", "engineering", "department name")
+			ctx.WithValue("flags", f)
+			return nil
+		},
+		Run: func(ctx *cc.CommandContext) (err error) {
+			f := ctx.Value("flags").(*flags)
+			fmt.Fprintf(ctx.Out, "manage users (role=%s, dept=%s): args=%v\n", f.Role, f.Department, ctx.Args)
+			return nil
+		},
+	}
+
+	userAdd := &cc.Command{
+		Name:        "add",
+		Description: "add a new user",
+		Usage:       "USER_NAME",
+		ParseArgs: func(ctx *cc.CommandContext) (err error) {
+			return ctx.Args.Eq(1)
+		},
+		Run: func(ctx *cc.CommandContext) (err error) {
+			fmt.Fprintf(ctx.Out, "adding user %q\n", ctx.Args[0])
+			return nil
+		},
+	}
+
+	userRm := &cc.Command{
+		Name:        "rm",
+		Description: "remove an existing user",
+		Usage:       "USER_NAME",
+		ParseArgs: func(ctx *cc.CommandContext) (err error) {
+			return ctx.Args.Eq(1)
+		},
+		Run: func(ctx *cc.CommandContext) (err error) {
+			fmt.Fprintf(ctx.Out, "removing user %q\n", ctx.Args[0])
+			return nil
+		},
+	}
+
+	user.Sub(userAdd).Sub(userRm)
+
+	// take passwd and user as subcommands of main
 	main.Sub(passwd)
+	main.Sub(user)
 
 	ctx, err := main.Parse(nil)
 
